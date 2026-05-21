@@ -59,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <h3>Senaryo</h3>
  * <p>Kamu SM test ortamı revoked / expired / suspended sertifikalarıyla
- * (RSA-2048 + EC-384, toplam 6 PFX) imza atılır ve {@code mersel-verifier-api}
+ * (RSA-2048 + EC-384, toplam 6 PFX) imza atılır ve {@code edmsign-verifier-api}
  * downstream'inde reddedildiği doğrulanır. Tamper testlerinin
  * ({@link XAdESNegativeE2ETest}, {@link CAdESTamperedE2ETest},
  * {@link PAdESTamperedE2ETest}) tersine: imza matematik olarak <b>doğru</b>,
@@ -155,7 +155,7 @@ class CertificateLifecycleNegativeE2ETest extends AbstractVerifierE2ETest {
 
         CAdESService dssCades = new CAdESService(verifier);
         cadesService = new CAdESSignatureService(
-                dssCades, crypto, digestResolver, new Semaphore(2));
+                dssCades, crypto, digestResolver, null, null, new Semaphore(2));
 
         padesService = new PAdESSignatureService(new Semaphore(2), digestResolver);
 
@@ -207,7 +207,7 @@ class CertificateLifecycleNegativeE2ETest extends AbstractVerifierE2ETest {
     @Description(
             "Kamu SM TEST CA tarafından üretilmiş **lifecycle-bozuk** bir sertifikayla " +
             "(REVOKED / EXPIRED / SUSPENDED) gerçek bir e-Fatura / SOAP / PDF / detached " +
-            "binary imzalanır ve `mersel-verifier-api` downstream'ine yollanır. " +
+            "binary imzalanır ve `edmsign-verifier-api` downstream'ine yollanır. " +
             "<br><br><b>Birincil kontrat</b>: <code>response.isValid() == false</code>. " +
             "<br><b>İkincil kontrat</b>: <code>indication != TOTAL_PASSED</code>. " +
             "<br><br>Exact <code>subIndication</code> verifier (DSS) sürümüne göre değişir; " +
@@ -297,7 +297,7 @@ class CertificateLifecycleNegativeE2ETest extends AbstractVerifierE2ETest {
         VerifierApiClient.VerificationResponse verifierResponse;
         try {
             verifierResponse = Allure.step(
-                    "4) İmzalı bytes'ı mersel-verifier-api'ye yolla (roundtrip)",
+                    "4) İmzalı bytes'ı edmsign-verifier-api'ye yolla (roundtrip)",
                     () -> verifierClient().verify(signedBytesRef, format.fileName));
         } catch (VerifierApiClient.VerifierBackendUnavailable backendDown) {
             // Verifier image'ta gerekli DSS modülü eksikse skip — bu test'in

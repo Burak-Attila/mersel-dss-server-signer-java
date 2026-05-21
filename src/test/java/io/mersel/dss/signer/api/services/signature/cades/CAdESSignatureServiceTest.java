@@ -55,6 +55,8 @@ class CAdESSignatureServiceTest {
     @Mock private CAdESService cadesService;
     @Mock private CryptoSignerService cryptoSigner;
     @Mock private DigestAlgorithmResolverService digestAlgorithmResolver;
+    @Mock private io.mersel.dss.signer.api.services.timestamp.TimestampConfigurationService timestampConfigurationService;
+    @Mock private eu.europa.esig.dss.spi.validation.CertificateVerifier certificateVerifier;
 
     private static KeyPair testKeyPair;
     private static X509Certificate testCertificate;
@@ -87,8 +89,8 @@ class CAdESSignatureServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        semaphore = new Semaphore(2);
-        service = new CAdESSignatureService(cadesService, cryptoSigner, digestAlgorithmResolver, semaphore);
+        service = new CAdESSignatureService(cadesService, cryptoSigner, digestAlgorithmResolver,
+                timestampConfigurationService, certificateVerifier, semaphore);
     }
 
     private SigningMaterial createTestMaterial() {

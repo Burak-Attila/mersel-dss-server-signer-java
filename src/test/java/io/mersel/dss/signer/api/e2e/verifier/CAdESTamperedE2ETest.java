@@ -85,7 +85,7 @@ class CAdESTamperedE2ETest extends AbstractVerifierE2ETest {
         CryptoSignerService crypto = new CryptoSignerService(sigAlgResolver);
         cadesSignatureService = new CAdESSignatureService(
                 cadesService, crypto, digestResolver,
-                new Semaphore(2));
+                null, null, new Semaphore(2));
         defaultMaterial = E2eSigningBackend.PFX_JCA.load(PfxTestKey.positiveValues()[0]);
     }
 
@@ -95,7 +95,7 @@ class CAdESTamperedE2ETest extends AbstractVerifierE2ETest {
         // Sabit bir payload — runtime üreteç değil, böylece tamper offset
         // belirleyebiliyoruz ve mesaj human-readable.
         byte[] originalData =
-                "Mersel CAdES negative-test payload — tamper this and watch verifier scream.\n"
+                "EdmSign CAdES negative-test payload — tamper this and watch verifier scream.\n"
                         .getBytes(java.nio.charset.StandardCharsets.UTF_8);
         if (originalData.length < 32) {
             fail("Test payload çok kısa — tamper offset güvenli değil");

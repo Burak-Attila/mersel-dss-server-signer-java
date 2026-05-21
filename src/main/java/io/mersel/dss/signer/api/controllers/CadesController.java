@@ -3,6 +3,7 @@ package io.mersel.dss.signer.api.controllers;
 import java.util.UUID;
 
 import io.mersel.dss.signer.api.models.SigningMaterial;
+import io.mersel.dss.signer.api.models.enums.CadesSignatureLevel;
 import io.mersel.dss.signer.api.services.signature.cades.CAdESSignatureService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,19 +26,25 @@ import io.mersel.dss.signer.api.models.ErrorModel;
 import io.mersel.dss.signer.api.models.SignResponse;
 
 /**
- * CAdES-BES seviyesinde elektronik imza operasyonlarını yöneten REST controller.
+ * CAdES elektronik imza operasyonlarını yöneten REST controller.
  *
- * <p>CAdES (CMS Advanced Electronic Signatures), ETSI TS 101 733 standardına uygun
- * olarak her türlü dosya formatı üzerinde dijital imza oluşturmayı sağlar.
- * Bu controller multipart/form-data üzerinden gelen dosyaları alıp imzalar ve
- * sonucu PKCS#7 (.p7s) formatında döndürür.</p>
+ * <p>CAdES (CMS Advanced Electronic Signatures), ETSI TS 101 733 / EN 319 122-1
+ * standartlarına uygun olarak her türlü dosya formatı üzerinde dijital imza
+ * oluşturmayı sağlar. Bu controller multipart/form-data üzerinden gelen dosyaları
+ * alıp imzalar ve sonucu PKCS#7 (.p7s) formatında döndürür.</p>
+ *
+ * <p>Desteklenen imza seviyeleri ({@link CadesSignatureLevel}):</p>
+ * <ul>
+ *   <li><b>BES</b> (varsayılan)</li>
+ *   <li><b>T</b> — BES + RFC 3161 zaman damgası</li>
+ *   <li><b>X-LONG</b> — CRL/OCSP verileri imza zarfına gömülür</li>
+ *   <li><b>ESA</b> — Archive timestamp ile uzun dönem arşiv (CAdES-A)</li>
+ * </ul>
  *
  * <p>Desteklenen imza modları:</p>
  * <ul>
- *   <li><b>Attached (gömülü):</b> İmzalanan içerik, CMS zarfının içine gömülür.
- *       Tek bir .p7s dosyası hem imzayı hem orijinal belgeyi barındırır.</li>
- *   <li><b>Detached (ayrık):</b> Yalnızca imza verisi üretilir; orijinal belge
- *       ayrı saklanır. Doğrulama sırasında her ikisi de gereklidir.</li>
+ *   <li><b>Attached (gömülü):</b> İmzalanan içerik CMS zarfının içine gömülür.</li>
+ *   <li><b>Detached (ayrık):</b> Yalnızca imza verisi üretilir.</li>
  * </ul>
  *
  * <p>Detached modda imza değeri ayrıca {@code x-signature-value} response header'ında
@@ -45,6 +52,7 @@ import io.mersel.dss.signer.api.models.SignResponse;
  * büyük dosyalarda HTTP header boyut limitini aşabilir.</p>
  *
  * @see CAdESSignatureService
+ * @see CadesSignatureLevel
  * @see SigningMaterial
  */
 @RestController
@@ -56,33 +64,18 @@ public class CadesController {
     private final CAdESSignatureService cadesSignatureService;
     private final SigningMaterial signingMaterial;
 
-    /**
-     * @param cadesSignatureService CAdES imza oluşturma işlemlerini gerçekleştiren servis
-     * @param signingMaterial       Uygulama genelinde kullanılan sertifika ve private key çifti.
-     *                              Genellikle PKCS#11 (HSM) veya PKCS#12 (.pfx) kaynağından yüklenir.
-     */
     public CadesController(CAdESSignatureService cadesSignatureService,
                            SigningMaterial signingMaterial) {
         this.cadesSignatureService = cadesSignatureService;
         this.signingMaterial = signingMaterial;
     }
 
-    /**
-     * Gelen dosyayı CAdES-BES seviyesinde imzalar ve .p7s olarak döndürür.
-     *
-     * <p>İstek multipart/form-data olarak gönderilmelidir. {@code document} alanı zorunlu,
-     * {@code detached} alanı opsiyoneldir (varsayılan: false → attached imza).</p>
-     *
-     * <p>Başarılı yanıt her zaman {@code application/octet-stream} olarak döner.
-     * Detached modda ek olarak {@code x-signature-value} header'ı Base64 imza değerini içerir.</p>
-     *
-     * @param dto Belge ve imza parametrelerini taşıyan DTO
-     * @return İmzalı .p7s dosyası veya hata durumunda {@link ErrorModel}
-     */
     @Operation(
-            summary = "Dosyaları CAdES-BES imzası ile imzalar",
-            description = "Her türlü dosya için CAdES-BES seviyesinde elektronik imza oluşturur. " +
-                    "Attached (gömülü) veya detached (ayrık) imza desteklenir."
+            summary = "Dosyaları CAdES imzası ile imzalar (BES / T / X-LONG / ESA)",
+            description = "Her türlü dosya için CAdES elektronik imzası oluşturur. " +
+                    "Attached (gömülü) veya detached (ayrık) imza ve BES, T, X-LONG, ESA " +
+                    "seviyeleri desteklenir. X-LONG ve ESA seviyelerinde CRL/OCSP verileri " +
+                    "imza zarfına gömülür."
     )
     @RequestMapping(value = "/v1/cadessign", method = RequestMethod.POST,
             consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
@@ -104,18 +97,28 @@ public class CadesController {
 
             boolean detached = Boolean.TRUE.equals(dto.getDetached());
 
-            SignResponse result;
-            try (java.io.InputStream is = dto.getDocument().getInputStream()) {
-                result = cadesSignatureService.signData(is, detached, signingMaterial);
+            CadesSignatureLevel level;
+            try {
+                level = CadesSignatureLevel.fromString(dto.getLevel());
+            } catch (IllegalArgumentException ex) {
+                LOGGER.warn("Geçersiz CAdES seviyesi: {}", dto.getLevel());
+                return ResponseEntity.badRequest()
+                        .body(new ErrorModel("INVALID_LEVEL", ex.getMessage()));
             }
 
-            LOGGER.info("CAdES imzası başarıyla oluşturuldu (detached: {})", detached);
+            SignResponse result;
+            try (java.io.InputStream is = dto.getDocument().getInputStream()) {
+                result = cadesSignatureService.signData(is, detached, level, signingMaterial);
+            }
+
+            LOGGER.info("CAdES imzası başarıyla oluşturuldu (seviye: {}, detached: {})", level, detached);
 
             // Attached imzada CMS zarfı orijinal belgeyi de içerdiğinden Base64 hali
             // çok büyük olabilir; bu yüzden header yalnızca detached modda eklenir.
             ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
                     .header("Content-Disposition",
                             "attachment; filename=\"signed-" + UUID.randomUUID() + ".p7s\"")
+                    .header("x-cades-level", level.name())
                     .contentType(MediaType.APPLICATION_OCTET_STREAM);
             if (detached) {
                 builder = builder.header("x-signature-value", result.getSignatureValue());

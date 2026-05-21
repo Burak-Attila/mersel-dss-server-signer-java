@@ -5,6 +5,7 @@ import io.mersel.dss.signer.api.exceptions.SignatureException;
 import io.mersel.dss.signer.api.models.ErrorModel;
 import io.mersel.dss.signer.api.models.SignResponse;
 import io.mersel.dss.signer.api.models.SigningMaterial;
+import io.mersel.dss.signer.api.models.enums.CadesSignatureLevel;
 import io.mersel.dss.signer.api.services.signature.cades.CAdESSignatureService;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -48,7 +49,8 @@ class CadesControllerTest {
         void attachedMode_shouldReturnOkWithOctetStream() throws Exception {
             byte[] signedBytes = "signed-data".getBytes();
             SignResponse mockResponse = new SignResponse(signedBytes, "base64sig");
-            when(cadesSignatureService.signData(any(InputStream.class), eq(false), eq(signingMaterial)))
+            when(cadesSignatureService.signData(any(InputStream.class), eq(false),
+                    any(CadesSignatureLevel.class), eq(signingMaterial)))
                     .thenReturn(mockResponse);
 
             SignCadesDto dto = new SignCadesDto();
@@ -65,7 +67,8 @@ class CadesControllerTest {
         @Test
         void detachedMode_shouldIncludeSignatureValueHeader() throws Exception {
             SignResponse mockResponse = new SignResponse("detached-sig".getBytes(), "detached-base64");
-            when(cadesSignatureService.signData(any(InputStream.class), eq(true), eq(signingMaterial)))
+            when(cadesSignatureService.signData(any(InputStream.class), eq(true),
+                    any(CadesSignatureLevel.class), eq(signingMaterial)))
                     .thenReturn(mockResponse);
 
             SignCadesDto dto = new SignCadesDto();
@@ -82,7 +85,8 @@ class CadesControllerTest {
         @Test
         void attachedMode_shouldNotIncludeSignatureValueHeader() throws Exception {
             SignResponse mockResponse = new SignResponse("attached-data".getBytes(), "big-base64");
-            when(cadesSignatureService.signData(any(InputStream.class), eq(false), eq(signingMaterial)))
+            when(cadesSignatureService.signData(any(InputStream.class), eq(false),
+                    any(CadesSignatureLevel.class), eq(signingMaterial)))
                     .thenReturn(mockResponse);
 
             SignCadesDto dto = new SignCadesDto();
@@ -97,7 +101,8 @@ class CadesControllerTest {
         @Test
         void shouldReturnContentDispositionWithP7sExtension() throws Exception {
             SignResponse mockResponse = new SignResponse("data".getBytes(), "sig");
-            when(cadesSignatureService.signData(any(), anyBoolean(), any())).thenReturn(mockResponse);
+            when(cadesSignatureService.signData(any(), anyBoolean(), any(CadesSignatureLevel.class), any()))
+                    .thenReturn(mockResponse);
 
             SignCadesDto dto = new SignCadesDto();
             dto.setDocument(new MockMultipartFile("document", "file.pdf", "application/pdf", "content".getBytes()));
@@ -112,7 +117,8 @@ class CadesControllerTest {
         @Test
         void nullDetachedFlag_shouldDefaultToAttached() throws Exception {
             SignResponse mockResponse = new SignResponse("data".getBytes(), "sig");
-            when(cadesSignatureService.signData(any(InputStream.class), eq(false), eq(signingMaterial)))
+            when(cadesSignatureService.signData(any(InputStream.class), eq(false),
+                    any(CadesSignatureLevel.class), eq(signingMaterial)))
                     .thenReturn(mockResponse);
 
             SignCadesDto dto = new SignCadesDto();
@@ -122,7 +128,8 @@ class CadesControllerTest {
             ResponseEntity<?> response = controller.signCades(dto);
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
-            verify(cadesSignatureService).signData(any(InputStream.class), eq(false), any());
+            verify(cadesSignatureService).signData(any(InputStream.class), eq(false),
+                    any(CadesSignatureLevel.class), any());
         }
     }
 
@@ -157,7 +164,7 @@ class CadesControllerTest {
 
         @Test
         void serviceException_shouldReturnInternalServerError() throws Exception {
-            when(cadesSignatureService.signData(any(), anyBoolean(), any()))
+            when(cadesSignatureService.signData(any(), anyBoolean(), any(CadesSignatureLevel.class), any()))
                     .thenThrow(new SignatureException("CADES_SIGN_ERROR", "CAdES failed"));
 
             SignCadesDto dto = new SignCadesDto();
@@ -171,7 +178,7 @@ class CadesControllerTest {
 
         @Test
         void unexpectedException_shouldReturnInternalServerError() throws Exception {
-            when(cadesSignatureService.signData(any(), anyBoolean(), any()))
+            when(cadesSignatureService.signData(any(), anyBoolean(), any(CadesSignatureLevel.class), any()))
                     .thenThrow(new RuntimeException("Unexpected"));
 
             SignCadesDto dto = new SignCadesDto();

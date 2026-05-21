@@ -70,7 +70,7 @@ class CAdESSignAndVerifyE2ETest extends AbstractVerifierE2ETest {
 
         cadesSignatureService = new CAdESSignatureService(
                 cadesService, crypto, digestResolver,
-                new java.util.concurrent.Semaphore(2));
+                null, null, new java.util.concurrent.Semaphore(2));
     }
 
     static Stream<Arguments> pfxAndModeMatrix() {
@@ -109,7 +109,7 @@ class CAdESSignAndVerifyE2ETest extends AbstractVerifierE2ETest {
                         data, E2eFixtures.cadesFileName())
                 : verifierClient().verify(signed.getSignedDocument(), "signed.p7s");
 
-        // Imzalı dosya + payload (detached) + mersel-verifier-api response'unu
+        // Imzalı dosya + payload (detached) + edmsign-verifier-api response'unu
         // Pages "Evidence Site" için disk'e + Allure attachment olarak export et.
         // Verify'dan SONRA çağırıyoruz; sidecar JSON gerçek verifier sonucu.
         String exportLabel = key.name() + "_" + backend.name() + "_" + modeLabel;
@@ -132,7 +132,7 @@ class CAdESSignAndVerifyE2ETest extends AbstractVerifierE2ETest {
      * <h3>Sıkı seviye: <code>valid=true</code> + <code>indication=TOTAL_PASSED</code></h3>
      * <p>Bu repo'nun sorumluluğu <b>imza üretimi</b>; ama "imzanın doğru
      * üretildiğinin" tek meşru ispatı verifier'ın <code>VALID</code> dönmesidir.
-     * mersel-dss-verifier-api-java şu durumda artık:</p>
+     * edmsign-dss-verifier-api-java şu durumda artık:</p>
      * <ul>
      *   <li>KamuSM root'unu <code>trusted=true</code> olarak işaretliyor (29 root yükleniyor),</li>
      *   <li>Revocation eksikliğini fail değil <code>WARN</code> olarak ele alan

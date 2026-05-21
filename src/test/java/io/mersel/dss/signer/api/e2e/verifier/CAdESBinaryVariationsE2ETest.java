@@ -86,7 +86,7 @@ class CAdESBinaryVariationsE2ETest extends AbstractVerifierE2ETest {
         CryptoSignerService crypto = new CryptoSignerService(sigAlgResolver);
         cadesSignatureService = new CAdESSignatureService(
                 cadesService, crypto, digestResolver,
-                new Semaphore(2));
+                null, null, new Semaphore(2));
         defaultMaterial = E2eSigningBackend.PFX_JCA.load(PfxTestKey.positiveValues()[0]);
     }
 

@@ -80,7 +80,7 @@ class SignatureServiceSemaphoreConcurrencyTest {
         kpg.initialize(2048);
         testKeyPair = kpg.generateKeyPair();
 
-        X500Name subject = new X500Name("CN=Concurrency Test, O=Mersel, C=TR");
+        X500Name subject = new X500Name("CN=Concurrency Test, O=EdmSign, C=TR");
         Date notBefore = new Date();
         Date notAfter = new Date(notBefore.getTime() + 365L * 24 * 60 * 60 * 1000);
         SubjectPublicKeyInfo spki =
@@ -133,7 +133,7 @@ class SignatureServiceSemaphoreConcurrencyTest {
 
         Semaphore semaphore = new Semaphore(PERMITS);
         CAdESSignatureService service = new CAdESSignatureService(
-            dssService, cryptoSigner, digestResolver, semaphore);
+            dssService, cryptoSigner, digestResolver, null, null, semaphore);
 
         SigningMaterial material = new SigningMaterial(
             testKeyPair.getPrivate(),
@@ -208,7 +208,7 @@ class SignatureServiceSemaphoreConcurrencyTest {
 
         Semaphore semaphore = new Semaphore(PERMITS);
         CAdESSignatureService service = new CAdESSignatureService(
-            dssService, cryptoSigner, digestResolver, semaphore);
+            dssService, cryptoSigner, digestResolver, null, null, semaphore);
 
         SigningMaterial material = new SigningMaterial(
             testKeyPair.getPrivate(), testCertificate,
@@ -315,6 +315,6 @@ class SignatureServiceSemaphoreConcurrencyTest {
         when(digestResolver.resolveDigestAlgorithm(any(X509Certificate.class)))
             .thenReturn(DigestAlgorithm.SHA256);
 
-        return new CAdESSignatureService(dssService, cryptoSigner, digestResolver, shared);
+        return new CAdESSignatureService(dssService, cryptoSigner, digestResolver, null, null, shared);
     }
 }
